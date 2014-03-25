@@ -1,0 +1,22 @@
+{
+    "name": "ride/lib-security-oauth",
+    "description": "OAuth implementation for the security model of the Ride framework",
+    "license": "MIT",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Joris Vandeweerd",
+            "email": "joris@statik.be"
+        }
+    ],
+    "require": {
+        "ride/lib-http": ">=0.3.3",
+        "ride/lib-http-client": ">=0.1.1",
+        "ride/lib-security": ">=0.1.6"
+    },
+    "autoload": {
+        "psr-0": {
+            "ride\\library\\security\\": ["src/"]
+        }
+    }
+}
