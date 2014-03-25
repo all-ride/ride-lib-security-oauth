@@ -58,7 +58,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
      * @param ride\library\security\authenticator\io\AuthenticatorIO $io
      * @return null
      */
-    public function setAuthenticatorIO($io) {
+    public function setAuthenticatorIO(AuthenticatorIO $io) {
         $this->io = $io;
     }
 
