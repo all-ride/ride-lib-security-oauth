@@ -4,7 +4,6 @@ namespace ride\library\security\authenticator;
 
 use ride\library\http\Request;
 use ride\library\security\authenticator\io\AuthenticatorIO;
-use ride\library\security\authenticator\AbstractAuthenticator;
 use ride\library\security\exception\InactiveAuthenticationException;
 use ride\library\security\exception\UnauthorizedException;
 use ride\library\security\model\User;
@@ -24,13 +23,13 @@ class OAuth2Authenticator extends AbstractAuthenticator {
 
     /**
      * OAuth2 client
-     * @var ride\library\security\OAuth2Client
+     * @var \ride\library\security\OAuth2Client
      */
     protected $client;
 
     /**
      * AuthenticatorIO to cache the authentication
-     * @var ride\library\security\authenticator\io\AuthenticatorIO
+     * @var \ride\library\security\authenticator\io\AuthenticatorIO
      */
     protected $io;
 
@@ -42,7 +41,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
 
     /**
      * Constructs a new authenticator
-     * @param ride\library\security\authenticator\io\AuthenticatorIO $io
+     * @param \ride\library\security\authenticator\io\AuthenticatorIO $io
      * authenticator to extend with Google authentication support
      * @return null
      */
@@ -55,7 +54,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
     /**
      * Sets the authenticator IO to cached the authentications. When the io is
      * set, the server will not authenticate the access token for every request
-     * @param ride\library\security\authenticator\io\AuthenticatorIO $io
+     * @param \ride\library\security\authenticator\io\AuthenticatorIO $io
      * @return null
      */
     public function setAuthenticatorIO(AuthenticatorIO $io) {
@@ -102,8 +101,8 @@ class OAuth2Authenticator extends AbstractAuthenticator {
 
     /**
      * Authenticates a user through the incoming request
-     * @param ride\library\http\Request $request
-     * @return ride\library\security\model\User|null User if the authentication
+     * @param \ride\library\http\Request $request
+     * @return \ride\library\security\model\User|null User if the authentication
      * succeeded
      */
     public function authenticate(Request $request) {
@@ -139,7 +138,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
 
     /**
      * Gets the current user.
-     * @return ride\library\security\model\User User instance if a user is
+     * @return \ride\library\security\model\User User instance if a user is
      * logged in, null otherwise
      */
     public function getUser() {
@@ -157,9 +156,9 @@ class OAuth2Authenticator extends AbstractAuthenticator {
 
     /**
      * Sets the current authenticated user
-     * @param ride\library\security\model\User $user User to set the
+     * @param \ride\library\security\model\User $user User to set the
      * authentication for
-     * @return ride\library\security\model\User updated user with the
+     * @return \ride\library\security\model\User updated user with the
      * information of the authentification
      */
     public function setUser(User $user) {
