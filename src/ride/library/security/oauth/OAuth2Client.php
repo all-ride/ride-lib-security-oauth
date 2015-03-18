@@ -61,13 +61,13 @@ class OAuth2Client extends AbstractClient {
 
     /**
      * HTTP client
-     * @var ride\library\http\client\Client
+     * @var \ride\library\http\client\Client
      */
     protected $httpClient;
 
     /**
      * I/O for the authenticator
-     * @var ride\library\security\authenticator\io\AuthenticatorIO
+     * @var \ride\library\security\authenticator\io\AuthenticatorIO
      */
     protected $io;
 
@@ -98,8 +98,8 @@ class OAuth2Client extends AbstractClient {
 
     /**
      * Constructs a new OAuth client
-     * @param ride\library\http\client\Client $httpClient
-     * @param ride\library\security\authenticator\io\AuthenticatorIO $io
+     * @param \ride\library\http\client\Client $httpClient
+     * @param \ride\library\security\authenticator\io\AuthenticatorIO $io
      * @return null
      */
     public function __construct(Client $httpClient, AuthenticatorIO $io) {
@@ -216,20 +216,8 @@ class OAuth2Client extends AbstractClient {
     }
 
     /**
-     * Clears the token
-     * @return null
-     */
-    public function clearToken() {
-        $this->token = null;
-
-        if ($this->urlToken) {
-            $this->io->set($this->urlToken, null);
-        }
-    }
-
-    /**
-     * Gets the current token
-     * @return string
+     * Gets the current access token. When it's expired, a refresh is attempted.
+     * @return string|boolean Access token if authenticated, false otherwise
      * @throws Exception
      */
     public function getToken() {
@@ -250,18 +238,20 @@ class OAuth2Client extends AbstractClient {
             $this->log->logDebug('Access token from storage', var_export($accessToken, true), self::LOG_SOURCE);
         }
 
-        if (!isset($accessToken['value'])) {
+        if (!isset($accessToken['access_token'])) {
             $this->token = false;
-        } elseif (isset($accessToken['expires']) && strcmp($accessToken['expires'], gmstrftime('%Y-%m-%d %H:%M:%S')) < 0) {
+        } elseif (isset($accessToken['expires']) && $accessToken['expires'] < time()) {
             if($this->log) {
-                $this->log->logDebug('OAuth access token expired on ' . $accessToken['expires'], null, self::LOG_SOURCE);
+                $this->log->logDebug('OAuth access token expired on ' . gmstrftime('%Y-%m-%d %H:%M:%S', $accessToken['expires']), null, self::LOG_SOURCE);
             }
 
-            // perform refresh?
-
-            $this->token = false;
+            if (isset($accessToken['refresh'])) {
+                $this->refreshToken($accessToken['refresh'], $accessToken);
+            } else {
+                $this->token = false;
+            }
         } else {
-            $this->token = $accessToken['value'];
+            $this->token = $accessToken['access_token'];
             if (isset($accessToken['type'])) {
                 $this->tokenType = $accessToken['type'];
             }
@@ -275,8 +265,20 @@ class OAuth2Client extends AbstractClient {
     }
 
     /**
+     * Clears the token
+     * @return null
+     */
+    public function clearToken() {
+        $this->token = null;
+
+        if ($this->urlToken) {
+            $this->io->set($this->urlToken, null);
+        }
+    }
+
+    /**
      * Authenticates the incoming request
-     * @param ride\library\http\Request $request
+     * @param \ride\library\http\Request $request
      * @return boolean True when the request could be authenticated, false
      * otherwise
      */
@@ -290,40 +292,55 @@ class OAuth2Client extends AbstractClient {
             $this->log->logDebug('Checking the authentication code', null, self::LOG_SOURCE);
         }
 
-        $code = $request->getQueryParameter('code');
-        if (!$code) {
+        $authorizationCode = $request->getQueryParameter('code');
+        if (!$authorizationCode) {
             $error = $request->getQueryParameter('error');
-            if (!$error) {
+            if ($error) {
                 if ($this->log) {
-                    $this->log->logDebug('Authorization failed without error', null, self::LOG_SOURCE);
+                    $this->log->logDebug('Authorization failed with error', $error, self::LOG_SOURCE);
                 }
 
-                return false;
-            }
-
-            if ($this->log) {
-                $this->log->logDebug('Authorization failed with error', $error, self::LOG_SOURCE);
-            }
-
-            if ($error != 'invalid_request' && $error != 'unauthorized_client' && $error != 'access_denied' &&
-                $error != 'unsupported_response_type' && $error != 'invalid_scope' && $error != 'server_error' &&
-                $error != 'temporarily_unavailable' && $error != 'user_denied') {
-                throw new SecurityException('Unknown OAuth error code returned: ' . $error);
+                switch ($error) {
+                    case 'invalid_request':
+                    case 'invalid_request':
+                    case 'unauthorized_client':
+                    case 'access_denied':
+                    case 'unsupported_response_type':
+                    case 'invalid_scope':
+                    case 'server_error':
+                    case 'temporarily_unavailable':
+                    case 'user_denied':
+                        break;
+                    default:
+                        throw new SecurityException('Unknown OAuth error code returned: ' . $error);
+                }
+            } elseif ($this->log) {
+                $this->log->logDebug('Authorization failed without error', null, self::LOG_SOURCE);
             }
 
             return false;
         }
 
         $requestState = $request->getQueryParameter('state');
-        $state = $this->getState();
-        if ($requestState != $state) {
+        $serverState = $this->getState();
+        if ($requestState != $serverState) {
             if ($this->log) {
-                $this->log->logDebug('Received state (' . $requestState . ') does not match state (' . $state . ')', null, self::LOG_SOURCE);
+                $this->log->logDebug('Received state (' . $requestState . ') does not match state (' . $serverState . ')', null, self::LOG_SOURCE);
             }
 
             return false;
         }
 
+        return $this->retrieveToken($authorizationCode);
+    }
+
+    /**
+     * Retrieves the access token with the provided authorization code
+     * @param string $authorizationCode Authorization code received from the
+     * authorization server
+     * @return boolean True when successfull, false otherwise
+     */
+    private function retrieveToken($authorizationCode) {
         if (!$this->urlToken) {
             throw new SecurityException('No access token URL set');
         }
@@ -341,7 +358,7 @@ class OAuth2Client extends AbstractClient {
         }
 
         $body = array(
-            'code' => $code,
+            'code' => $authorizationCode,
             'client_id' => $this->clientId,
             'client_secret' => $this->clientSecret,
             'redirect_uri' => $this->redirectUri,
@@ -354,57 +371,44 @@ class OAuth2Client extends AbstractClient {
         );
 
         $response = $this->httpClient->post($this->urlToken, $body, $headers);
-        if ($response->getStatusCode() != 200) {
-            if ($this->log) {
-                $this->log->logDebug('Received status code ' . $response->getStatusCode() . ' for ' . $this->urlToken, null, self::LOG_SOURCE);
-            }
 
-            return false;
+        return $this->parseTokenResponse($response);
+    }
+
+    /**
+     * Refreshes the access token with the provided refresh token
+     * @param string $refreshToken Refresh token to send
+     * @param array $token Current token data
+     * @return boolean True when successfull, false otherwise
+     */
+    private function refreshToken($refreshToken, array $token) {
+        if (!$this->urlToken) {
+            throw new SecurityException('No access token URL set');
         }
 
-        $response = $this->parseResponse($response, true);
-
-        if (!isset($response['access_token'])) {
-            if (isset($response['error'])) {
-                if ($this->log) {
-                    $this->log->logDebug('Unable to retrieve the access token, received error: ' . $response['error'], null, self::LOG_SOURCE);
-                }
-
-                return false;
-            }
-
-            throw new SecurityException('OAuth server did not return the access token nor an error. Is the address ' . $this->urlToken . ' correct?');
+        if (!$this->clientId) {
+            throw new SecurityException('No client id set');
         }
 
-        $this->token = $response['access_token'];
-        $token = array(
-            'value' => $this->token,
-            'authorized' => true,
+        if (!$this->clientSecret) {
+            throw new SecurityException('No client secret set');
+        }
+
+        $body = array(
+            'client_id' => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'refresh_token' => $refreshToken,
+            'grant_type' => 'refresh_token',
         );
 
-        if (isset($response['expires']) || isset($response['expires_in'])) {
-            $expires = (isset($response['expires']) ? $response['expires'] : $response['expires_in']);
+        $headers = array(
+            'Accept' => '*/*',
+            'Content-Type' => 'application/x-www-form-urlencoded',
+        );
 
-            if (strval($expires) !== strval(intval($expires)) || $expires <= 0) {
-                throw new SecurityException('OAuth server did not return a supported type of access token expiry time');
-            }
+        $response = $this->httpClient->post($this->urlToken, $body, $headers);
 
-            $token['expires'] = gmstrftime('%Y-%m-%d %H:%M:%S', time() + $expires);
-        }
-
-        if (isset($response['token_type'])) {
-            $token['type'] = $response['token_type'];
-        }
-
-        if (isset($response['refresh_token'])) {
-            $token['refresh'] = $response['refresh_token'];
-        }
-
-        if ($this->log) {
-            $this->log->logDebug('OAuth access token', $this->token, self::LOG_SOURCE);
-        }
-
-        $this->io->set($this->urlToken, $token);
+        return $this->parseTokenResponse($response, $token);
     }
 
     /**
@@ -423,26 +427,78 @@ class OAuth2Client extends AbstractClient {
     }
 
     /**
-     * Gets the user information from the OAuth server
-     * @return array|boolean Array with the user information or false on error
-     * @throws Exception when no URL for user info is set
+     * Parses the response of a token request
+     * @param \ride\library\http\Response $response Response of the token
+     * request
+     * @param array $token Container for the token variables
+     * @return boolean True when granted, false otherwise
+     * @throws \ride\library\security\exception\SecurityException when the
+     * response has an invalid format
      */
-    public function getUserInfo() {
-        if (!$this->urlUserInfo) {
-            throw new SecurityException('No user info URL set');
-        }
+    private function parseTokenResponse(Response $response, array $token = array()) {
+        $this->token = false;
 
-        $response = $this->get($this->urlUserInfo);
         if ($response->getStatusCode() != 200) {
+            if ($this->log) {
+                $this->log->logDebug('Received status code ' . $response->getStatusCode() . ' for ' . $this->urlToken, null, self::LOG_SOURCE);
+            }
+
             return false;
         }
 
-        return $this->parseResponse($response, true);
+        $response = $this->parseResponse($response, true);
+
+        if (isset($response['error'])) {
+            if ($this->log) {
+                $this->log->logDebug('Unable to retrieve the access token, received error: ' . $response['error'], null, self::LOG_SOURCE);
+            }
+
+            return false;
+        }
+
+        if (!isset($response['access_token'])) {
+            throw new SecurityException('OAuth server did not return the access token nor an error. Is the address ' . $this->urlToken . ' correct?');
+        }
+
+        if ($this->log) {
+            $this->log->logDebug('OAuth answer', var_export($response, true), self::LOG_SOURCE);
+        }
+
+        $token['access_token'] = $response['access_token'];
+        $token['created'] = time();
+
+        if (isset($response['expires_in'])) {
+            $expires = $response['expires_in'];
+            if (strval($expires) !== strval(intval($expires)) || $expires <= 0) {
+                throw new SecurityException('OAuth server did not return a supported type of access token expiry time');
+            }
+
+            $token['expires'] = time() + $expires;
+        } elseif (isset($token['expires'])) {
+            unset($token['expires']);
+        }
+
+        if (isset($response['token_type'])) {
+            $token['type'] = $response['token_type'];
+        }
+
+        if (isset($response['refresh_token'])) {
+            $token['refresh'] = $response['refresh_token'];
+        }
+
+        if ($this->log) {
+            $this->log->logDebug('OAuth access token', $this->token, self::LOG_SOURCE);
+        }
+
+        $this->io->set($this->urlToken, $token);
+        $this->token = $token['access_token'];
+
+        return true;
     }
 
     /**
      * Parses the body of a response into a useable variable
-     * @param ride\library\http\Response $response Response to parse
+     * @param \ride\library\http\Response $response Response to parse
      * @param boolean $convertObjectsToArray Set to true to convert json
      * objects to arrays
      * @return mixed
@@ -487,9 +543,27 @@ class OAuth2Client extends AbstractClient {
     }
 
     /**
+     * Gets the user information from the OAuth server
+     * @return array|boolean Array with the user information or false on error
+     * @throws Exception when no URL for user info is set
+     */
+    public function getUserInfo() {
+        if (!$this->urlUserInfo) {
+            throw new SecurityException('No user info URL set');
+        }
+
+        $response = $this->get($this->urlUserInfo);
+        if ($response->getStatusCode() != 200) {
+            return false;
+        }
+
+        return $this->parseResponse($response, true);
+    }
+
+    /**
      * Performs a request
-     * @param ride\library\http\Request $request Request to send
-     * @return ride\library\http\Response Response of the request
+     * @param \ride\library\http\Request $request Request to send
+     * @return \ride\library\http\Response Response of the request
      */
     public function sendRequest(LibraryRequest $request) {
         return $this->httpClient->sendRequest($request);
@@ -499,11 +573,11 @@ class OAuth2Client extends AbstractClient {
      * Creates a HTTP client request
      * @param string $method HTTP method (GET, POST, ...)
      * @param string $url URL for the request
-     * @param ride\library\http\HeaderContainer $headers Headers for the
+     * @param \ride\library\http\HeaderContainer $headers Headers for the
      * request
      * @param string|array $body URL encoded string or an array of request
      * body arguments
-     * @return ride\library\http\client\Request
+     * @return \ride\library\http\client\Request
      */
     public function createRequest($method, $url, HeaderContainer $headers = null, $body = null) {
         if ($headers === null) {
