@@ -12,8 +12,8 @@ class GoogleOAuth2Client extends OAuth2Client {
 
     /**
      * Constructs a new Google OAuth2 client
-     * @param ride\library\http\client\Client $httpClient
-     * @param ride\library\security\authenticator\io\AuthenticatorIO $io
+     * @param \ride\library\http\client\Client $httpClient
+     * @param \ride\library\security\authenticator\io\AuthenticatorIO $io
      * @param boolean $useOfflineAccess Set to true to get the refresh token
      * @return null
      */

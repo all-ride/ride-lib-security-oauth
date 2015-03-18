@@ -61,13 +61,13 @@ class OAuth2Client extends AbstractClient {
 
     /**
      * HTTP client
-     * @var ride\library\http\client\Client
+     * @var \ride\library\http\client\Client
      */
     protected $httpClient;
 
     /**
      * I/O for the authenticator
-     * @var ride\library\security\authenticator\io\AuthenticatorIO
+     * @var \ride\library\security\authenticator\io\AuthenticatorIO
      */
     protected $io;
 
@@ -98,8 +98,8 @@ class OAuth2Client extends AbstractClient {
 
     /**
      * Constructs a new OAuth client
-     * @param ride\library\http\client\Client $httpClient
-     * @param ride\library\security\authenticator\io\AuthenticatorIO $io
+     * @param \ride\library\http\client\Client $httpClient
+     * @param \ride\library\security\authenticator\io\AuthenticatorIO $io
      * @return null
      */
     public function __construct(Client $httpClient, AuthenticatorIO $io) {
@@ -278,7 +278,7 @@ class OAuth2Client extends AbstractClient {
 
     /**
      * Authenticates the incoming request
-     * @param ride\library\http\Request $request
+     * @param \ride\library\http\Request $request
      * @return boolean True when the request could be authenticated, false
      * otherwise
      */
@@ -498,7 +498,7 @@ class OAuth2Client extends AbstractClient {
 
     /**
      * Parses the body of a response into a useable variable
-     * @param ride\library\http\Response $response Response to parse
+     * @param \ride\library\http\Response $response Response to parse
      * @param boolean $convertObjectsToArray Set to true to convert json
      * objects to arrays
      * @return mixed
@@ -562,8 +562,8 @@ class OAuth2Client extends AbstractClient {
 
     /**
      * Performs a request
-     * @param ride\library\http\Request $request Request to send
-     * @return ride\library\http\Response Response of the request
+     * @param \ride\library\http\Request $request Request to send
+     * @return \ride\library\http\Response Response of the request
      */
     public function sendRequest(LibraryRequest $request) {
         return $this->httpClient->sendRequest($request);
@@ -573,11 +573,11 @@ class OAuth2Client extends AbstractClient {
      * Creates a HTTP client request
      * @param string $method HTTP method (GET, POST, ...)
      * @param string $url URL for the request
-     * @param ride\library\http\HeaderContainer $headers Headers for the
+     * @param \ride\library\http\HeaderContainer $headers Headers for the
      * request
      * @param string|array $body URL encoded string or an array of request
      * body arguments
-     * @return ride\library\http\client\Request
+     * @return \ride\library\http\client\Request
      */
     public function createRequest($method, $url, HeaderContainer $headers = null, $body = null) {
         if ($headers === null) {
