@@ -49,7 +49,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
     public function __construct(OAuth2Client $client) {
         $this->client = $client;
         $this->io = null;
-        $this->user = null;
+        $this->user = false;
     }
 
     /**
@@ -93,7 +93,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
     }
 
     /**
-     * Gets the URL to Google for authentication
+     * Gets the URL for authentication
      * @return string
      */
     public function getAuthorizationUrl() {
@@ -143,7 +143,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
      * logged in, null otherwise
      */
     public function getUser() {
-        if ($this->io) {
+        if ($this->user === false && $this->io && $this->client->getToken()) {
             $username = $this->io->get(self::VAR_USER);
             if ($username) {
                 $securityModel = $this->securityManager->getSecurityModel();
@@ -152,7 +152,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
             }
         }
 
-        return $this->user;
+        return parent::getUser();
     }
 
     /**
@@ -162,12 +162,12 @@ class OAuth2Authenticator extends AbstractAuthenticator {
      * @return ride\library\security\model\User updated user with the
      * information of the authentification
      */
-    public function setUser(User $user) {
-        if ($this->io) {
+    public function setUser(User $user = null) {
+        if ($user !== null && $this->io) {
             $this->io->set(self::VAR_USER, $user->getUsername());
         }
 
-        return $this->user = $user;
+        return parent::setUser($user);
     }
 
 }
