@@ -97,6 +97,12 @@ class OAuth2Client extends AbstractClient {
     protected $scope;
 
     /**
+     * Flag to see if client calls should use a query parameter or a header
+     * @var boolean
+     */
+    protected $useAuthorizationHeader;
+
+    /**
      * Constructs a new OAuth client
      * @param \ride\library\http\client\Client $httpClient
      * @param \ride\library\security\authenticator\io\AuthenticatorIO $io
@@ -115,6 +121,26 @@ class OAuth2Client extends AbstractClient {
         $this->urlAuthorization = null;
         $this->urlToken = null;
         $this->urlUserInfo = null;
+        $this->useAuthorizationHeader = false;
+    }
+
+    /**
+     * Sets whether to use a authorization header or a query parameter to
+     * provide the access token to the OAuth server
+     * @param boolean $useAuthorizationHeader
+     * @return null
+     */
+    public function setUseAuthorizationHeader($useAuthorizationHeader) {
+        $this->useAuthorizationHeader = $useAuthorizationHeader;
+    }
+
+    /**
+     * Gets whether to use a authorization header or a query parameter to
+     * provide the access token to the OAuth server
+     * @return boolean
+     */
+    public function useAuthorizationHeader() {
+        return $this->useAuthorizationHeader;
     }
 
     /**
@@ -182,10 +208,6 @@ class OAuth2Client extends AbstractClient {
 
         if (!$this->clientId) {
             throw new SecurityException('No client id set');
-        }
-
-        if (!$this->clientSecret) {
-            throw new SecurityException('No client secret set');
         }
 
         $url = $this->urlAuthorization;
@@ -353,17 +375,16 @@ class OAuth2Client extends AbstractClient {
             throw new SecurityException('No client id set');
         }
 
-        if (!$this->clientSecret) {
-            throw new SecurityException('No client secret set');
-        }
-
         $body = array(
             'code' => $authorizationCode,
             'client_id' => $this->clientId,
-            'client_secret' => $this->clientSecret,
             'redirect_uri' => $this->redirectUri,
             'grant_type' => 'authorization_code',
         );
+
+        if ($this->clientSecret) {
+            $body['client_secret'] = $this->clientSecret;
+        }
 
         $headers = array(
             'Accept' => '*/*',
@@ -390,16 +411,15 @@ class OAuth2Client extends AbstractClient {
             throw new SecurityException('No client id set');
         }
 
-        if (!$this->clientSecret) {
-            throw new SecurityException('No client secret set');
-        }
-
         $body = array(
             'client_id' => $this->clientId,
-            'client_secret' => $this->clientSecret,
             'refresh_token' => $refreshToken,
             'grant_type' => 'refresh_token',
         );
+
+        if ($this->clientSecret) {
+            $body['client_secret'] = $this->clientSecret;
+        }
 
         $headers = array(
             'Accept' => '*/*',
@@ -592,18 +612,22 @@ class OAuth2Client extends AbstractClient {
             $path = '/';
         }
 
+        if (isset($vars['query'])) {
+            $path .= '?' . $vars['query'];
+        }
+
         if (isset($vars['host'])) {
             $headers->setHeader(Header::HEADER_HOST, $vars['host'], true);
         }
 
-        if (isset($vars['query'])) {
-            $path .= '?' . $vars['query'];
-
-            if ($this->token) {
+        if ($this->token) {
+            if ($this->useAuthorizationHeader()) {
+                $headers->setHeader(Header::HEADER_AUTHORIZATION, 'Bearer ' . $this->token);
+            } elseif (isset($vars['query'])) {
                 $path .= '&access_token=' . urlencode($this->token);
+            } else {
+                $path .= '?access_token=' . urlencode($this->token);
             }
-        } elseif ($this->token) {
-            $path .= '?access_token=' . urlencode($this->token);
         }
 
         $request = new Request($path, $method, 'HTTP/1.1', $headers, $body);
