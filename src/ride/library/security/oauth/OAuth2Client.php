@@ -305,6 +305,12 @@ class OAuth2Client extends AbstractClient {
      * otherwise
      */
     public function authenticate(LibraryRequest $request) {
+        if (str_replace($request->getQuery(), '', $request->getUrl()) == $this->redirectUri) {
+            // skip oauth which has not the current URL as redirectUri
+
+            return false;
+        }
+
         $token = $this->getToken();
         if ($token) {
             return $token !== false;
