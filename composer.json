@@ -2,7 +2,7 @@
     "name": "ride/lib-security-oauth",
     "description": "OAuth implementation for the security model of the Ride framework",
     "license": "MIT",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "authors": [
         {
             "name": "Joris Vandeweerd",
