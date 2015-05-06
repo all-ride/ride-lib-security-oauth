@@ -24,7 +24,7 @@ class EmailConnectPolicy implements ConnectPolicy {
      */
     public function connectUser(OAuth2Client $client, SecurityModel $securityModel) {
         // get the user information
-        $userInfo = $this->client->getUserInfo();
+        $userInfo = $client->getUserInfo();
         if (!isset($userInfo['email'])) {
             return null;
         }
