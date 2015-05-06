@@ -7,7 +7,7 @@ use ride\library\security\authenticator\io\AuthenticatorIO;
 use ride\library\security\exception\InactiveAuthenticationException;
 use ride\library\security\exception\UnauthorizedException;
 use ride\library\security\model\User;
-use ride\library\security\oauth\ConnectPolicy;
+use ride\library\security\oauth\policy\ConnectPolicy;
 use ride\library\security\oauth\OAuth2Client;
 
 /**
@@ -63,7 +63,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
 
     /**
      * Sets the connect policy for new users
-     * @param ConnectPolicy $connectPolicy
+     * @param \ride\library\security\oauth\policy\ConnectPolicy $connectPolicy
      * @return null
      */
     public function setConnectPolicy(ConnectPolicy $connectPolicy) {
@@ -106,27 +106,18 @@ class OAuth2Authenticator extends AbstractAuthenticator {
      * succeeded
      */
     public function authenticate(Request $request) {
+        $user = null;
+
         if (!$this->client->authenticate($request)) {
-            return null;
+            return $user;
         }
 
-        $userInfo = $this->client->getUserInfo();
-        if (!isset($userInfo['email'])) {
-            return null;
+        if ($this->connectPolicy) {
+            $user = $this->connectPolicy->connectUser($this->client, $this->securityManager->getSecurityModel());
         }
-
-        $securityModel = $this->securityManager->getSecurityModel();
-
-        $user = $securityModel->getUserByEmail($userInfo['email']);
 
         if (!$user) {
-            if ($this->connectPolicy) {
-                $user = $this->connectPolicy->connectUser($securityModel, $userInfo);
-            }
-
-            if (!$user) {
-                throw new UnauthorizedException();
-            }
+            throw new UnauthorizedException();
         }
 
         if (!$user->isActive()) {
