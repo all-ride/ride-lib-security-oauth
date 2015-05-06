@@ -1,16 +1,15 @@
 <?php
 
-namespace ride\library\security\oauth;
+namespace ride\library\security\oauth\policy;
 
 use ride\library\security\model\SecurityModel;
-use ride\library\String;
 
 use \Exception;
 
 /**
  * Connect policy to allow everybody to connect with your system
  */
-class EverybodyConnectPolicy implements ConnectPolicy {
+class EverybodyConnectPolicy extends EmailConnectPolicy {
 
     /**
      * Roles to set to a new user
@@ -55,26 +54,10 @@ class EverybodyConnectPolicy implements ConnectPolicy {
      * @return \ride\library\security\model\User|null User if a new user has
      * been created, null if the user is not allowed
      */
-    public function connectUser(SecurityModel $securityModel, array $userInfo) {
-        // check for needed data
-        if (!isset($userInfo['name']) || !isset($userInfo['email'])) {
-            return false;
-        }
-
-        // create the user
-        $user = $securityModel->createUser();
-        $user->setDisplayName($userInfo['name']);
-        $user->setUserName($userInfo['email']);
-        $user->setEmail($userInfo['email']);
-        $user->setIsEmailConfirmed(true);
-        $user->setPassword(String::generate());
-        $user->setIsActive(true);
-
-        // save the user
-        try {
-            $securityModel->saveUser($user);
-        } catch (Exception $exception) {
-            return false;
+    protected function createUser(SecurityModel $securityModel, array $userInfo) {
+        $user = parent::createUser($securityModel, $userInfo);
+        if (!$user) {
+            return null;
         }
 
         // check for user roles
