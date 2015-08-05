@@ -626,13 +626,14 @@ class OAuth2Client extends AbstractClient {
             $headers->setHeader(Header::HEADER_HOST, $vars['host'], true);
         }
 
-        if ($this->token) {
+        $token = $this->getToken();
+        if ($token) {
             if ($this->useAuthorizationHeader()) {
-                $headers->setHeader(Header::HEADER_AUTHORIZATION, 'Bearer ' . $this->token);
+                $headers->setHeader(Header::HEADER_AUTHORIZATION, 'Bearer ' . $token);
             } elseif (isset($vars['query'])) {
-                $path .= '&access_token=' . urlencode($this->token);
+                $path .= '&access_token=' . urlencode($token);
             } else {
-                $path .= '?access_token=' . urlencode($this->token);
+                $path .= '?access_token=' . urlencode($token);
             }
         }
 
