@@ -238,6 +238,25 @@ class OAuth2Client extends AbstractClient {
     }
 
     /**
+     * Sets the token
+     * @param string Access token
+     * @return null
+     */
+    public function setToken($token, $refreshToken = null) {
+        if (!$this->urlToken) {
+            throw new SecurityException('No access token URL set');
+        }
+
+        $accessToken = array(
+            'token' => $token,
+            'refreshToken' => $refreshToken,
+        );
+        $this->io->set($this->urlToken, $accessToken);
+
+        $this->token = $token;
+    }
+
+    /**
      * Gets the current access token. When it's expired, a refresh is attempted.
      * @return string|boolean Access token if authenticated, false otherwise
      * @throws Exception
