@@ -60,6 +60,9 @@ class EmailConnectPolicy implements ConnectPolicy {
         $user->setIsEmailConfirmed(true);
         $user->setPassword(StringHelper::generate());
         $user->setIsActive(true);
+        if (isset($userInfo['isSuperUser']) && $userInfo['isSuperUser']) {
+            $user->setIsSuperUser(true);
+        }
 
         // save the user
         try {
