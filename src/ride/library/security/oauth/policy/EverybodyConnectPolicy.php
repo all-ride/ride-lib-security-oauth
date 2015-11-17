@@ -56,33 +56,36 @@ class EverybodyConnectPolicy extends EmailConnectPolicy {
      */
     protected function createUser(SecurityModel $securityModel, array $userInfo) {
         $user = parent::createUser($securityModel, $userInfo);
-        if (!$user) {
-            return null;
+        if (!$user || !$this->roles) {
+            return $user;
         }
 
-        // check for user roles
-        if ($this->roles) {
-            // retrieve roles from security model
-            $roles = array();
-            foreach ($this->roles as $role => $null) {
-                try {
-                    if (is_numeric($role)) {
-                        $roles[] = $securityModel->getRoleById($role);
-                    } else {
-                        $roles[] = $securityModel->getRoleByName($role);
-                    }
-                } catch (Exception $exception) {
+        // retrieve roles from security model
+        $roles = array();
+        foreach ($this->roles as $role => $null) {
+            if (is_numeric($role)) {
+                $r = $securityModel->getRoleById($role);
+            } else {
+                $r = $securityModel->getRoleByName($role);
+                if (!$r) {
+                    $r = $securityModel->createRole();
+                    $r->setName($role);
 
+                    $securityModel->saveRole($r);
                 }
             }
 
-            // set roles to user
-            if ($roles) {
-                try {
-                    $securityModel->setRolesToUser($user, $roles);
-                } catch (Exception $exception) {
+            if ($r) {
+                $roles[] = $r;
+            }
+        }
 
-                }
+        // set roles to user
+        if ($roles) {
+            try {
+                $securityModel->setRolesToUser($user, $roles);
+            } catch (Exception $exception) {
+
             }
         }
 
