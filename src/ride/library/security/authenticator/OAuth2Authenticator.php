@@ -120,7 +120,7 @@ class OAuth2Authenticator extends AbstractAuthenticator {
         $user = null;
 
         if (!$this->client->authenticate($request)) {
-            return $user;
+            return $this->getUser();
         }
 
         if ($this->connectPolicy) {

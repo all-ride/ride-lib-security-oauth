@@ -312,6 +312,8 @@ class OAuth2Client extends AbstractClient {
     public function clearToken() {
         $this->token = null;
 
+        $this->io->set(self::VAR_STATE, null);
+
         if ($this->urlToken) {
             $this->io->set($this->urlToken, null);
         }
@@ -402,19 +404,20 @@ class OAuth2Client extends AbstractClient {
 
         $body = array(
             'code' => $authorizationCode,
-            'client_id' => $this->clientId,
             'redirect_uri' => $this->redirectUri,
             'grant_type' => 'authorization_code',
         );
-
-        if ($this->clientSecret) {
-            $body['client_secret'] = $this->clientSecret;
-        }
 
         $headers = array(
             'Accept' => '*/*',
             'Content-Type' => 'application/x-www-form-urlencoded',
         );
+
+        if ($this->clientSecret) {
+            // $body['client_id'] => $this->clientId;
+            // $body['client_secret'] = $this->clientSecret;
+            $headers['Authorization'] = 'Basic ' . base64_encode(urlencode($this->clientId) . ':' . urlencode($this->clientSecret));
+        }
 
         $response = $this->httpClient->post($this->urlToken, $body, $headers);
 
