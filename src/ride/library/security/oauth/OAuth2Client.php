@@ -291,7 +291,7 @@ class OAuth2Client extends AbstractClient {
             $this->token = false;
         } elseif (isset($accessToken['expires']) && $accessToken['expires'] < time()) {
             if($this->log) {
-                $this->log->logDebug('OAuth access token expired on ' . gmstrftime('%Y-%m-%d %H:%M:%S', $accessToken['expires']), null, self::LOG_SOURCE);
+                $this->log->logDebug('OAuth access token expired on ' . gmdate('%Y-%m-%d %H:%M:%S', $accessToken['expires']), null, self::LOG_SOURCE);
             }
 
             if (isset($accessToken['refresh'])) {
