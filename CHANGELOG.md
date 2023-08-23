@@ -1,3 +1,6 @@
+# 1.1 - 2023-06-02
+## Updated
+- fixed compatibility with php 8.1
 # 1.0.1 2019-02-12
 ## Updated
 - use authorization header for client credentials
