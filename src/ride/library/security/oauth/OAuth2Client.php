@@ -101,6 +101,8 @@ class OAuth2Client extends AbstractClient {
      * @var boolean
      */
     protected $useAuthorizationHeader;
+    protected $redirectUri;
+    protected $tokenType;
 
     /**
      * Constructs a new OAuth client
@@ -212,7 +214,7 @@ class OAuth2Client extends AbstractClient {
 
         $url = $this->urlAuthorization;
         if (is_string($this->redirectUri)) {
-            $url = str_replace('%redirect.uri%', urlencode($this->redirectUri), $url);   
+            $url = str_replace('%redirect.uri%', urlencode($this->redirectUri), $url);
         }
         if (is_string($this->clientId)) {
             $url = str_replace('%client.id%', urlencode($this->clientId), $url);
@@ -474,7 +476,7 @@ class OAuth2Client extends AbstractClient {
     protected function getState() {
         $state = $this->io->get(self::VAR_STATE);
         if (!$state) {
-            $state = time() . '-' . substr(md5(rand() . time()), 0, 6);
+            $state = time() . '-' . substr(md5(random_int(0, mt_getrandmax()) . time()), 0, 6);
 
             $this->io->set(self::VAR_STATE, $state);
         }
